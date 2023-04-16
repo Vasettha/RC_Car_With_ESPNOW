@@ -1,0 +1,112 @@
+#include <esp_now.h>
+#include <WiFi.h>
+
+typedef struct {
+ int Front;
+ int Left;
+ int Right;
+ int Back;
+} struct_message;
+
+struct_message myData;
+//Pin Numbering
+#define LEFT1 14  
+#define LEFT2 12
+#define RIGHT1 17
+#define RIGHT2 16
+//pwm attached channel
+#define LEFT1_C 0 
+#define LEFT2_C 1 
+#define RIGHT1_C 2 
+#define RIGHT2_C 3 
+
+void goFront() {
+// (channel, dutyCycle)
+ledcWrite(LEFT1_C, 200);
+ledcWrite(LEFT2_C, 0);
+ledcWrite(RIGHT1_C, 200);
+ledcWrite(RIGHT2_C, 0);
+}
+
+void goLeft() {
+// (channel, dutyCycle)
+ledcWrite(LEFT1_C, 0);
+ledcWrite(LEFT2_C, 200);
+ledcWrite(RIGHT1_C, 200);
+ledcWrite(RIGHT2_C, 0);
+}
+
+void goRight() {
+// (channel, dutyCycle)
+ledcWrite(LEFT1_C, 200);
+ledcWrite(LEFT2_C, 0);
+ledcWrite(RIGHT1_C, 0);
+ledcWrite(RIGHT2_C, 200);
+}
+
+void goBack() {
+// (channel, dutyCycle)
+ledcWrite(LEFT1_C, 0);
+ledcWrite(LEFT2_C, 200);
+ledcWrite(RIGHT1_C, 0);
+ledcWrite(RIGHT2_C, 200);
+}
+
+void stoop() {
+// (channel, dutyCycle)
+ledcWrite(LEFT1_C, 0);
+ledcWrite(LEFT2_C, 0);
+ledcWrite(RIGHT1_C, 0);
+ledcWrite(RIGHT2_C, 0);
+}
+
+//To act on the received message
+void OnDataRecv(const uint8_t * mac, const uint8_t *incomingData, int len) {
+  memcpy(&myData, incomingData, sizeof(myData));
+  if (myData.Front ==0) {
+    goFront();
+  } else if (myData.Left ==0) {
+    goLeft();
+  } else if (myData.Right ==0) {
+    goRight();
+  } else if (myData.Back ==0) {
+    goBack();
+  } else {
+    stoop();
+  }
+}
+
+void setup() {
+  //PinMode
+  pinMode(LEFT1,OUTPUT);
+  pinMode(LEFT2,OUTPUT);
+  pinMode(RIGHT1,OUTPUT);
+  pinMode(RIGHT2,OUTPUT);
+
+  //Connecting PWM channels
+  //(channel,freq,res)
+  ledcSetup(LEFT1_C,1000,8);
+  ledcSetup(LEFT2_C,1000,8);
+  ledcSetup(RIGHT1_C,1000,8);
+  ledcSetup(RIGHT2_C,1000,8);
+  //(pin, channel)
+  ledcAttachPin(LEFT1,LEFT1_C); 
+  ledcAttachPin(LEFT2,LEFT2_C);
+  ledcAttachPin(RIGHT1,RIGHT1_C);
+  ledcAttachPin(RIGHT2,RIGHT2_C);
+
+  Serial.begin(115200);
+  //Set WiFi mode to Station
+  WiFi.mode(WIFI_STA);
+  //Initialize esp_now
+    if (esp_now_init() != ESP_OK) {
+    Serial.println("Error initializing ESP-NOW");
+    return;
+    }
+    
+    esp_now_register_recv_cb(OnDataRecv);//When a message is received, run OnDataRecv()
+ }
+ 
+ void loop(){
+ //unused
+ }
